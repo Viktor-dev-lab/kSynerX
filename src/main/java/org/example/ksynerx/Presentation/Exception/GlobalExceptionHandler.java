@@ -1,9 +1,7 @@
 package org.example.ksynerx.Presentation.Exception;
 
-import org.example.ksynerx.Application.InvalidProductIdException;
 import feign.FeignException;
 import feign.RetryableException;
-import org.example.ksynerx.Application.ProductNotFoundException;
 import org.example.ksynerx.Presentation.Contract.ApiResponse;
 import org.example.ksynerx.Presentation.Contract.APIResultCode;
 import org.slf4j.Logger;
@@ -23,28 +21,11 @@ public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(ProductNotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleProductNotFound(
-            ProductNotFoundException exception
-    ) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(
-                        APIResultCode.RESOURCE_NOT_FOUND,
-                        exception.getMessage()
-                ));
-    }
-
-    @ExceptionHandler({
-            InvalidProductIdException.class,
-            MethodArgumentTypeMismatchException.class
-    })
-    public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(Exception exception) {
-        String message = exception instanceof MethodArgumentTypeMismatchException mismatch
-                ? "Tham số '" + mismatch.getName() + "' không hợp lệ"
-                : exception.getMessage();
-
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(MethodArgumentTypeMismatchException exception) {
         return ResponseEntity.badRequest()
-                .body(ApiResponse.error(APIResultCode.INVALID_REQUEST, message));
+                .body(ApiResponse.error(APIResultCode.INVALID_REQUEST,
+                        "Tham số '" + exception.getName() + "' không hợp lệ"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

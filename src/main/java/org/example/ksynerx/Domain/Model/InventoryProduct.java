@@ -1,11 +1,8 @@
-package org.example.inventory.Presentation.Dto.Response;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.example.inventory.Domain.Model.VietfulProduct.Category;
+package org.example.ksynerx.Domain.Model;
 
 import java.util.List;
 
-public record VietfulProductListResponse(
+public record InventoryProduct(
         int productId,
         String sku,
         String partnerSKU,
@@ -16,7 +13,12 @@ public record VietfulProductListResponse(
         String color,
         String size,
         String description,
-        @JsonProperty("isActive") boolean isActive,
-        List<String> units,
+        boolean isActive,
         List<Category> categories
-) { }
+) {
+    public InventoryProduct {
+        categories = List.copyOf(categories);
+    }
+
+    public record Category(String categoryCode, String categoryName) { }
+}

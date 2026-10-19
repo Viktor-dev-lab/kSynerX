@@ -8,7 +8,6 @@ spring:
     driver-class-name: org.postgresql.Driver
   sql:
     init:
-      # Docker initializes the CDMS schema; do not run the old H2 scripts.
       mode: never
 
 server:

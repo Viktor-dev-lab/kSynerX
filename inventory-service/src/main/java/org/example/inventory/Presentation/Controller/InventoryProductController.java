@@ -1,8 +1,7 @@
 package org.example.inventory.Presentation.Controller;
 
 import org.example.inventory.Application.Service.GetVietfulProductsService;
-import org.example.inventory.Presentation.Dto.Response.VietfulProductDetailResponse;
-import org.example.inventory.Presentation.Dto.Response.VietfulProductListResponse;
+import org.example.inventory.Presentation.Dto.Response.VietfulProductResponse;
 import org.example.inventory.Presentation.Mapper.VietfulProductResponseMapper;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,12 +21,12 @@ public class InventoryProductController {
     }
 
     @GetMapping
-    public List<VietfulProductListResponse> getList() {
-        return service.getList().stream().map(VietfulProductResponseMapper::toListItem).toList();
+    public List<VietfulProductResponse> getList() {
+        return service.getList().stream().map(VietfulProductResponseMapper::toResponse).toList();
     }
 
     @GetMapping("/{productId}")
-    public VietfulProductDetailResponse getDetail(@PathVariable("productId") int productId) {
-        return VietfulProductResponseMapper.toDetail(service.getDetail(productId));
+    public VietfulProductResponse getDetail(@PathVariable("productId") int productId) {
+        return VietfulProductResponseMapper.toResponse(service.getDetail(productId));
     }
 }
