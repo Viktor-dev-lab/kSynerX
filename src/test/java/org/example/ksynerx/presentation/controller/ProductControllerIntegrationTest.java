@@ -5,10 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,7 +24,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnProduct() throws Exception {
-        mockMvc.perform(get("/api/v1/products/1"))
+        mockMvc.perform(productRequest("1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
@@ -33,7 +36,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnNotFound() throws Exception {
-        mockMvc.perform(get("/api/v1/products/999"))
+        mockMvc.perform(productRequest("999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
@@ -41,8 +44,8 @@ class ProductControllerIntegrationTest {
     }
 
     @Test
-    void shouldUseProductIdFromPathWhenQueryContainsAnotherProductId() throws Exception {
-        mockMvc.perform(get("/api/v1/products/1").param("productId", "2"))
+    void shouldUseProductIdFromBodyWhenQueryContainsAnotherProductId() throws Exception {
+        mockMvc.perform(productRequest("1").param("productId", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productId").value("1"))
                 .andExpect(jsonPath("$.data.name").value("Bàn phím cơ"));
@@ -50,7 +53,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnNotFoundForUnknownStringProductId() throws Exception {
-        mockMvc.perform(get("/api/v1/products/abc"))
+        mockMvc.perform(productRequest("abc"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
@@ -61,7 +64,7 @@ class ProductControllerIntegrationTest {
     @Sql(statements = "INSERT INTO products (product_id, name, price) VALUES ('PRD001', 'Sản phẩm mã chuỗi', 100.00)")
     @Sql(statements = "DELETE FROM products WHERE product_id = 'PRD001'", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void shouldLoadAlphanumericProductIdFromDatabase() throws Exception {
-        mockMvc.perform(get("/api/v1/products/PRD001"))
+        mockMvc.perform(productRequest("PRD001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productId").value("PRD001"))
                 .andExpect(jsonPath("$.data.name").value("Sản phẩm mã chuỗi"));
@@ -71,7 +74,7 @@ class ProductControllerIntegrationTest {
     @Sql(statements = "INSERT INTO products (product_id, name, price) VALUES ('001', 'Sản phẩm mã 001', 200.00)")
     @Sql(statements = "DELETE FROM products WHERE product_id = '001'", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
     void shouldPreserveLeadingZerosInProductId() throws Exception {
-        mockMvc.perform(get("/api/v1/products/001"))
+        mockMvc.perform(productRequest("001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productId").value("001"))
                 .andExpect(jsonPath("$.data.name").value("Sản phẩm mã 001"));
@@ -79,10 +82,16 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnRequestMetadataInResponse() throws Exception {
-        mockMvc.perform(get("/api/v1/products/1")
-                        .param("requestId", "request-001")
-                        .param("requestDateTime", "2026-10-19T08:00:00+07:00")
-                        .param("channel", "Web"))
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": "1",
+                                  "requestId": "request-001",
+                                  "requestDateTime": "2026-10-19T08:00:00+07:00",
+                                  "channel": "Web"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.requestId").value("request-001"))
                 .andExpect(jsonPath("$.requestDateTime").value("2026-10-19T08:00+07:00"))
@@ -91,7 +100,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnBadRequestForBlankProductId() throws Exception {
-        mockMvc.perform(get("/api/v1/products/{productId}", "   "))
+        mockMvc.perform(productRequest("   "))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.message").value("productId không được để trống"));
@@ -99,7 +108,7 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnBadRequestForProductIdLongerThanDatabaseLimit() throws Exception {
-        mockMvc.perform(get("/api/v1/products/{productId}", "P".repeat(65)))
+        mockMvc.perform(productRequest("P".repeat(65)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
                 .andExpect(jsonPath("$.message").value("productId không được vượt quá 64 ký tự"));
@@ -107,10 +116,64 @@ class ProductControllerIntegrationTest {
 
     @Test
     void shouldReturnBadRequestForInvalidRequestDateTime() throws Exception {
-        mockMvc.perform(get("/api/v1/products/1").param("requestDateTime", "invalid-date"))
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"productId": "1", "requestDateTime": "invalid-date"}
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
-                .andExpect(jsonPath("$.message").value("Tham số 'requestDateTime' không hợp lệ"));
+                .andExpect(jsonPath("$.message").value("Body JSON không hợp lệ hoặc sai kiểu dữ liệu"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenProductIdIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"))
+                .andExpect(jsonPath("$.message").value("productId không được để trống"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenBodyIsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/products").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenJsonIsMalformed() throws Exception {
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void shouldRejectGetMethod() throws Exception {
+        mockMvc.perform(get("/api/v1/products"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    void shouldRejectFormBody() throws Exception {
+        mockMvc.perform(post("/api/v1/products")
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .content("productId=1"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    private MockHttpServletRequestBuilder productRequest(String productId) {
+        return post("/api/v1/products")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"productId": "%s"}
+                        """.formatted(productId));
     }
 }

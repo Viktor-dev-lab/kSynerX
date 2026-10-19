@@ -1,8 +1,8 @@
 package org.example.ksynerx.Presentation.Dto.Request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -14,7 +14,8 @@ public record ProductRequest(
         String productId,
         @NotBlank @Size(max = 100)
         String requestId,
-        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime requestDateTime,
+        @JsonFormat(without = JsonFormat.Feature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+        OffsetDateTime requestDateTime,
         @NotBlank
         String channel
 ) {

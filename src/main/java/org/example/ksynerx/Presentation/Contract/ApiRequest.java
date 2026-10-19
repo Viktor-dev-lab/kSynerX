@@ -10,6 +10,6 @@ import java.time.OffsetDateTime;
 public record ApiRequest<T> (
         @NotBlank @Size(max = 100) String requestId,
         @NotNull OffsetDateTime requestDateTime,
-        @NotBlank @Pattern(regexp = "Web") String channel,
+        @NotBlank @Pattern(regexp = "Polling|Webhook|Excel") String channel,
         @NotNull @Valid T data
 ){}
