@@ -1,6 +1,12 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: inventory-service
 
 server:
   port: ${INVENTORY_PORT:8081}
+
+inventory:
+  seed: ${INVENTORY_SEED:20261020}
+  state-file: ${INVENTORY_STATE_FILE:inventory-service/.data/inventory-products.json}

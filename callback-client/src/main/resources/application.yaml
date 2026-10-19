@@ -1,0 +1,19 @@
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: callback-client
+  main:
+    web-application-type: none
+
+callback:
+  inventory-base-url: ${INVENTORY_BASE_URL:http://localhost:${INVENTORY_PORT:8081}}
+  webhook-url: ${CDMS_WEBHOOK_URL:http://localhost:${CDMS_PORT:8080}/api/v1/webhooks/inventory/products}
+  product-id: ${CALLBACK_PRODUCT_ID:}
+  snapshot-file: ${CALLBACK_SNAPSHOT_FILE:}
+  save-snapshot-file: ${CALLBACK_SAVE_SNAPSHOT_FILE:}
+  repeat: ${CALLBACK_REPEAT:1}
+  concurrency: ${CALLBACK_CONCURRENCY:1}
+  max-attempts: ${CALLBACK_MAX_ATTEMPTS:3}
+  retry-delay-ms: ${CALLBACK_RETRY_DELAY_MS:1000}
+  timeout-ms: ${CALLBACK_TIMEOUT_MS:10000}

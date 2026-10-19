@@ -1,0 +1,6 @@
+# Apply from the host terminal to enable the scheduled job in the CDMS container.
+# docker compose -f compose.yaml -f compose.polling.yaml up -d --wait cdms
+services:
+  cdms:
+    environment:
+      INVENTORY_POLLING_ENABLED: "true"

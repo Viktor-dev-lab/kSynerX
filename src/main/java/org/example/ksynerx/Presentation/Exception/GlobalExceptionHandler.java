@@ -2,6 +2,9 @@ package org.example.ksynerx.Presentation.Exception;
 
 import feign.FeignException;
 import feign.RetryableException;
+import org.example.ksynerx.Domain.Exception.ChannelConfigurationException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.TransactionException;
 import org.example.ksynerx.Presentation.Contract.ApiResponse;
 import org.example.ksynerx.Presentation.Contract.APIResultCode;
 import org.slf4j.Logger;
@@ -15,11 +18,33 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingEndpoint(NoResourceFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(APIResultCode.RESOURCE_NOT_FOUND, "Endpoint not found"));
+    }
+
+    @ExceptionHandler(ChannelConfigurationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleChannelConfiguration(ChannelConfigurationException exception) {
+        boolean disabled = exception.reason() == ChannelConfigurationException.Reason.DISABLED;
+        return ResponseEntity.status(disabled ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.CONFLICT)
+                .body(ApiResponse.error(disabled ? APIResultCode.EXTERNAL_SERVICE_UNAVAILABLE : APIResultCode.INVALID_REQUEST,
+                        exception.getMessage()));
+    }
+
+    @ExceptionHandler({DataAccessException.class, TransactionException.class})
+    public ResponseEntity<ApiResponse<Void>> handlePersistenceFailure(RuntimeException exception) {
+        LOGGER.error("Database operation failed; request was not acknowledged", exception);
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.error(APIResultCode.EXTERNAL_SERVICE_UNAVAILABLE, "Database operation failed; retry later"));
+    }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(MethodArgumentTypeMismatchException exception) {

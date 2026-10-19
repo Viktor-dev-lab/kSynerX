@@ -5,6 +5,7 @@ import org.example.inventory.Domain.Interface.VietfulProductSource;
 import org.example.inventory.Domain.Model.VietfulProduct;
 
 import java.util.List;
+import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Random;
@@ -13,15 +14,15 @@ import java.util.stream.IntStream;
 public class FakerVietfulProductSource implements VietfulProductSource {
     private static final int FIRST_PRODUCT_ID = 123;
     private static final int PRODUCT_COUNT = 25;
-    private static final long SEED = 20261019L;
 
     private final List<VietfulProduct> products;
 
-    public FakerVietfulProductSource() {
-        Faker faker = new Faker(Locale.ENGLISH, new Random(SEED));
-        products = IntStream.range(FIRST_PRODUCT_ID, FIRST_PRODUCT_ID + PRODUCT_COUNT)
+    public FakerVietfulProductSource(Path stateFile, long seed) {
+        Faker faker = new Faker(Locale.ENGLISH, new Random(seed));
+        var generated = IntStream.range(FIRST_PRODUCT_ID, FIRST_PRODUCT_ID + PRODUCT_COUNT)
                 .mapToObj(id -> createProduct(faker, id))
                 .toList();
+        products = new InventorySnapshotStore(stateFile).reconcile(generated);
     }
 
     @Override
@@ -43,7 +44,7 @@ public class FakerVietfulProductSource implements VietfulProductSource {
         var categories = List.of(new VietfulProduct.Category("CATEGORY001", "Hàng hóa giả lập"));
 
         return new VietfulProduct(
-                id, sku, partnerSKU, name, "Single", hasSerial, hasExpiration,
+                id, 1, sku, partnerSKU, name, "Single", hasSerial, hasExpiration,
                 faker.color().name(), faker.options().option("S", "M", "L", "XL", "XXL"),
                 faker.lorem().sentence(), true, categories);
     }

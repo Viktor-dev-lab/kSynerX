@@ -8,7 +8,7 @@ public final class VietfulProductResponseMapper {
 
     public static VietfulProductResponse toResponse(VietfulProduct product) {
         return new VietfulProductResponse(
-                product.productId(), product.sku(), product.partnerSKU(), product.productName(),
+                product.productId(), product.revision(), product.sku(), product.partnerSKU(), product.productName(),
                 product.assetType(), product.hasSerial(), product.hasExpiration(), product.color(),
                 product.size(), product.description(), product.isActive(), product.categories());
     }

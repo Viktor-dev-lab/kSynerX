@@ -37,3 +37,6 @@ build/
 .env.*
 !.env.example
 *.dump
+
+### Persistent local inventory snapshots and source revisions ###
+.data/

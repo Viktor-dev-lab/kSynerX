@@ -4,6 +4,7 @@ import java.util.List;
 
 public record InventoryProduct(
         int productId,
+        long revision,
         String sku,
         String partnerSKU,
         String productName,

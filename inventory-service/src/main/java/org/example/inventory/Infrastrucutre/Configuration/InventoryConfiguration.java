@@ -6,12 +6,16 @@ import org.example.inventory.Domain.Interface.VietfulProductSource;
 import org.example.inventory.Infrastrucutre.FakerVietfulProductSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
+
+import java.nio.file.Path;
 
 @Configuration
 public class InventoryConfiguration {
     @Bean
-    public VietfulProductSource vietfulProductSource() {
-        return new FakerVietfulProductSource();
+    public VietfulProductSource vietfulProductSource(@Value("${inventory.state-file}") String stateFile,
+                                                     @Value("${inventory.seed}") long seed) {
+        return new FakerVietfulProductSource(Path.of(stateFile), seed);
     }
 
     @Bean

@@ -8,7 +8,7 @@ public final class InventoryProductMapper {
 
     public static InventoryProduct fromResponse(InventoryProductResponse response) {
         return new InventoryProduct(
-                response.productId(), response.sku(), response.partnerSKU(), response.productName(),
+                response.productId(), response.revision(), response.sku(), response.partnerSKU(), response.productName(),
                 response.assetType(), response.hasSerial(), response.hasExpiration(), response.color(),
                 response.size(), response.description(), response.isActive(), response.categories());
     }

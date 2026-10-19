@@ -1,8 +1,10 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: kSynerX
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/${POSTGRES_DB:cdms}}
+    url: ${DB_URL:jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:cdms}}
     username: ${POSTGRES_USER:cdms}
     password: ${POSTGRES_PASSWORD:cdms_local_password}
     driver-class-name: org.postgresql.Driver
@@ -11,10 +13,34 @@ spring:
       mode: never
 
 server:
-  port: 8080
+  port: ${CDMS_PORT:8080}
 
 integrations:
   inventory:
-    base-url: ${INVENTORY_BASE_URL:http://localhost:8081}
-    connect-timeout-ms: 3000
-    read-timeout-ms: 10000
+    source-code: ${INVENTORY_SOURCE_CODE:VIETFUL_DEMO}
+    base-url: ${INVENTORY_BASE_URL:http://localhost:${INVENTORY_PORT:8081}}
+    connect-timeout-ms: ${INVENTORY_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${INVENTORY_READ_TIMEOUT_MS:10000}
+    polling:
+      enabled: ${INVENTORY_POLLING_ENABLED:true}
+      initial-delay-ms: ${INVENTORY_POLLING_INITIAL_DELAY_MS:5000}
+      fixed-delay-ms: ${INVENTORY_POLLING_FIXED_DELAY_MS:30000}
+      core-pool-size: ${INVENTORY_POLLING_CORE_POOL_SIZE:2}
+      max-pool-size: ${INVENTORY_POLLING_MAX_POOL_SIZE:4}
+      queue-capacity: ${INVENTORY_POLLING_QUEUE_CAPACITY:10}
+    webhook:
+      enabled: ${INVENTORY_WEBHOOK_ENABLED:true}
+
+inbox:
+  worker:
+    enabled: ${INBOX_WORKER_ENABLED:true}
+    initial-delay-ms: ${INBOX_WORKER_INITIAL_DELAY_MS:1000}
+    fixed-delay-ms: ${INBOX_WORKER_FIXED_DELAY_MS:1000}
+    concurrency: ${INBOX_WORKER_CONCURRENCY:2}
+    batch-size: ${INBOX_WORKER_BATCH_SIZE:50}
+    max-attempts: ${INBOX_WORKER_MAX_ATTEMPTS:5}
+    retry-delay-seconds: ${INBOX_WORKER_RETRY_DELAY_SECONDS:10}
+
+tasks:
+  executor:
+    shutdown-seconds: ${TASK_EXECUTOR_SHUTDOWN_SECONDS:20}

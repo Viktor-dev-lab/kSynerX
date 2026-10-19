@@ -7,6 +7,7 @@ import java.util.List;
 
 public record VietfulProductResponse(
         int productId,
+        long revision,
         String sku,
         String partnerSKU,
         String productName,

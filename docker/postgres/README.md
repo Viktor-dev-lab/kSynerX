@@ -32,8 +32,10 @@ volume riêng `ksynerx-cdms_postgres_data` giữ dữ liệu qua các lần kh�
 Đây là tài khoản quản trị database cho môi trường local, không phải cấu hình production.
 
 Có thể sao chép `.env.example` thành `.env` và chỉnh thông tin trước lần chạy đầu.
-Compose đọc `.env` tự động; Spring Boot cần các biến tương ứng được export
-trong terminal hoặc đặt trong Run Configuration của IDE. Đổi user/password
+Compose hiện hỗ trợ cả inventory-service và CDMS; xem [README gốc](../../README.md)
+để chạy toàn bộ bằng một lệnh. Chỉ chạy DB riêng bằng `docker compose up -d --wait postgres`.
+Compose và các ứng dụng Spring Boot đều tự đọc `.env` tại thư mục gốc repository;
+không cần export các biến trong terminal. Đổi user/password
 trong `.env` không tự thay đổi tài khoản trong một volume đã khởi tạo.
 
 ```bash
