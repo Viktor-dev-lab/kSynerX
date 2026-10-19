@@ -5,6 +5,8 @@ public enum APIResultCode {
     VALIDATION_ERROR("3000", "Invalid request data"),
     INVALID_REQUEST("3000", "Invalid request data"),
     RESOURCE_NOT_FOUND("1404", "Resource not found"),
+    UPSTREAM_ERROR("1502", "Upstream API error"),
+    EXTERNAL_SERVICE_UNAVAILABLE("1503", "External service unavailable"),
     USER_NOT_FOUND("1404", "User not found"),
     INTERNAL_SERVER_ERROR("0600", "Internal server error"),
     SYSTEM_ERROR("0600", "Internal server error");

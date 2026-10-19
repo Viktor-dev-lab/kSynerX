@@ -1,6 +1,8 @@
 package org.example.ksynerx.Presentation.Exception;
 
 import org.example.ksynerx.Application.InvalidProductIdException;
+import feign.FeignException;
+import feign.RetryableException;
 import org.example.ksynerx.Application.ProductNotFoundException;
 import org.example.ksynerx.Presentation.Contract.ApiResponse;
 import org.example.ksynerx.Presentation.Contract.APIResultCode;
@@ -78,6 +80,23 @@ public class GlobalExceptionHandler {
                 .headers(exception.getHeaders())
                 .body(ApiResponse.error(APIResultCode.INVALID_REQUEST,
                         "Content-Type không được hỗ trợ"));
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInventoryFeign(FeignException exception) {
+        if (exception instanceof RetryableException) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(ApiResponse.error(APIResultCode.EXTERNAL_SERVICE_UNAVAILABLE,
+                            "Không kết nối được Inventory Service"));
+        }
+        if (exception.status() == 404) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(APIResultCode.RESOURCE_NOT_FOUND,
+                            "Không tìm thấy sản phẩm trong Inventory Service"));
+        }
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiResponse.error(APIResultCode.UPSTREAM_ERROR,
+                        "Inventory Service trả lỗi"));
     }
 
     @ExceptionHandler(Exception.class)

@@ -13,3 +13,9 @@ spring:
 
 server:
   port: 8080
+
+integrations:
+  inventory:
+    base-url: ${INVENTORY_BASE_URL:http://localhost:8081}
+    connect-timeout-ms: 3000
+    read-timeout-ms: 10000

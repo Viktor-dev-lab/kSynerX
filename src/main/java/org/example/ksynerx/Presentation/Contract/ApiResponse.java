@@ -49,6 +49,8 @@ public record ApiResponse<T>(
             case "0000" -> "SUCCESS";
             case "1404" -> "RESOURCE_NOT_FOUND";
             case "3000" -> "INVALID_REQUEST";
+            case "1502" -> "UPSTREAM_ERROR";
+            case "1503" -> "EXTERNAL_SERVICE_UNAVAILABLE";
             default -> "INTERNAL_SERVER_ERROR";
         };
     }

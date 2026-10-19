@@ -115,10 +115,9 @@ vẫn query `name`, `price` và `product_id` dạng chuỗi; schema mới dùng 
 `products`. Vì vậy gọi POST sản phẩm mẫu trên database mới sẽ lỗi cho đến khi cập
 nhật model, DTO và query. Không tạo cột giả hoặc view tương thích làm lệch schema.
 
-H2 chỉ còn dependency scope `test`. Các test API mẫu bật profile `legacy-test`,
-dùng schema/fixtures dưới `src/test/resources/legacy`; chúng không chứng minh API
-đã tích hợp CDMS. Kiểm thử database CDMS độc lập bằng `verify.sh` ở trên.
+H2 chỉ còn dependency scope `test`; file test và fixtures API cũ đã được xóa theo
+yêu cầu, không tạo lại. Có thể kiểm tra schema độc lập bằng `verify.sh` ở trên.
 
 ```bash
-./mvnw test
+./mvnw clean package -DskipTests
 ```
