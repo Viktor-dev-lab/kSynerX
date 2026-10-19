@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local database configuration and backups ###
+.env
+.env.*
+!.env.example
+*.dump

@@ -1,3 +1,4 @@
+-- Fixtures for the legacy sample API; not CDMS production data.
 MERGE INTO products (product_id, name, price) KEY (product_id)
 VALUES ('1', 'Bàn phím cơ', 1290000.00);
 

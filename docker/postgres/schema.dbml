@@ -1,0 +1,236 @@
+Project cdms {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Latest-state CDMS with one authoritative logical source per product.
+    Three modules: Products with child tables, Channels, Inbox Events.
+    revision is an extension generated atomically by the inventory emulator.
+    All channels must preserve that source revision and deliver a complete,
+    consistently normalized Product detail snapshot before processing.
+    Child tables preserve array positions. Define one consistent policy for
+    null versus empty collections when normalizing and calculating hashes.
+    Product, child rows and inbox outcome are committed in one transaction.
+  '''
+}
+
+Enum channel_type {
+  POLLING
+  WEBHOOK
+  EXCEL
+}
+
+Enum inbox_status {
+  PENDING
+  RETRY
+  APPLIED
+  STALE
+  DUPLICATE
+  CONFLICT
+  FAILED
+}
+
+Table products {
+  id bigint [pk, increment, note: 'Internal database ID; referenced by child tables']
+  source_code varchar(100) [not null, note: 'Logical source, e.g. VIETFUL_DEMO; identical across its three channels']
+  product_id bigint [not null, note: 'productId from the source API']
+
+  product_name text
+  sku text
+  partner_sku text
+  outbound_type varchar(50)
+  is_expiry_date boolean
+  is_attribute boolean
+  is_lot_number boolean
+  is_tracking_serial boolean
+  num_days_warning_exp_date integer
+  num_days_export_before_exp_date integer
+  packing_note text
+  avatar_url text
+  asset_type varchar(50)
+  is_physical boolean
+  has_serial boolean
+  color text
+  size text
+  description text
+  is_active boolean
+  is_discreet boolean
+  parent_partner_sku text [note: 'Source value; no FK because the parent might not have been ingested']
+  hs_code text
+  country_of_origin text
+  ref_code text
+
+  revision bigint [not null, note: 'Latest source revision observed, including revisions with unchanged content']
+  content_hash varchar(64) [not null, note: 'SHA-256 of canonical business content, including child collections; excludes revision and local metadata']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`, note: 'CDMS write time; set explicitly on updates; not a source ordering field']
+
+  indexes {
+    (source_code, product_id) [unique, name: 'uq_products_source_product']
+    (source_code, sku) [name: 'idx_products_source_sku']
+    (source_code, partner_sku) [name: 'idx_products_source_partner_sku']
+  }
+
+  checks {
+    `revision > 0` [name: 'chk_products_revision']
+    `content_hash ~ '^[0-9a-f]{64}$'` [name: 'chk_products_content_hash']
+  }
+}
+
+Table product_units {
+  id bigint [pk, increment]
+  product_record_id bigint [not null]
+  position integer [not null, note: 'Zero-based position in units array']
+  unit_code text
+  unit_name text
+  length numeric
+  width numeric
+  height numeric
+  weight numeric
+
+  indexes {
+    (product_record_id, position) [unique, name: 'uq_product_units_position']
+  }
+  checks {
+    `position >= 0` [name: 'chk_product_units_position']
+  }
+}
+
+Table product_categories {
+  id bigint [pk, increment]
+  product_record_id bigint [not null]
+  position integer [not null]
+  category_code text
+  category_name text
+
+  indexes {
+    (product_record_id, position) [unique, name: 'uq_product_categories_position']
+  }
+  checks {
+    `position >= 0` [name: 'chk_product_categories_position']
+  }
+  Note: 'Product-scoped category snapshot; no shared category master that can change other products implicitly.'
+}
+
+Table product_bundles {
+  id bigint [pk, increment]
+  product_record_id bigint [not null]
+  position integer [not null]
+  sku text
+  unit_code text
+  qty numeric
+  available_percentage numeric
+
+  indexes {
+    (product_record_id, position) [unique, name: 'uq_product_bundles_position']
+  }
+  checks {
+    `position >= 0` [name: 'chk_product_bundles_position']
+  }
+}
+
+Table product_bundle_details {
+  id bigint [pk, increment]
+  product_bundle_id bigint [not null]
+  position integer [not null]
+  qty numeric
+  sale_price numeric
+
+  indexes {
+    (product_bundle_id, position) [unique, name: 'uq_product_bundle_details_position']
+  }
+  checks {
+    `position >= 0` [name: 'chk_product_bundle_details_position']
+  }
+}
+
+Table product_barcodes {
+  id bigint [pk, increment]
+  product_record_id bigint [not null]
+  position integer [not null]
+  barcode_product_id bigint [note: 'productId inside productBarcodes; external ID, not the parent FK']
+  product_name text
+  sku text
+  partner_sku text
+
+  indexes {
+    (product_record_id, position) [unique, name: 'uq_product_barcodes_position']
+  }
+  checks {
+    `position >= 0` [name: 'chk_product_barcodes_position']
+  }
+}
+
+Table channels {
+  id bigint [pk, increment]
+  source_code varchar(100) [not null, default: 'VIETFUL_DEMO', note: 'Same logical source for all three channels; keep immutable once events exist']
+  type channel_type [not null, unique, note: 'Prototype: one configured channel per type']
+  enabled boolean [not null, default: true]
+  poll_interval_seconds integer [note: 'Polling interval; leave null for WEBHOOK and EXCEL. Other settings live in application.yml']
+  created_at timestamptz [not null, default: `now()`]
+
+  checks {
+    `poll_interval_seconds IS NULL OR poll_interval_seconds > 0` [name: 'chk_channels_poll_interval']
+  }
+}
+
+Table inbox_events {
+  id bigint [pk, increment]
+  channel_id bigint [not null]
+  product_id bigint [not null, note: 'Source productId; no FK to products because the product may not exist yet']
+  revision bigint [not null, note: 'Source revision, preserved across channels']
+  payload jsonb [not null, note: 'Complete normalized Product detail snapshot']
+  content_hash varchar(64) [not null, note: 'Canonical business-content hash; same algorithm as products']
+  status inbox_status [not null, default: 'PENDING']
+  retry_count integer [not null, default: 0]
+  next_retry_at timestamptz [not null, default: `now()`]
+  error_message text [note: 'Failure reason or conflict details']
+  created_at timestamptz [not null, default: `now()`]
+  processed_at timestamptz
+
+  indexes {
+    (status, next_retry_at, created_at) [name: 'idx_inbox_worker_pick']
+    (channel_id, product_id) [name: 'idx_inbox_channel_product']
+  }
+
+  checks {
+    `revision > 0` [name: 'chk_inbox_revision']
+    `retry_count >= 0` [name: 'chk_inbox_retry_count']
+    `jsonb_typeof(payload) = 'object'` [name: 'chk_inbox_payload_object']
+    `content_hash ~ '^[0-9a-f]{64}$'` [name: 'chk_inbox_content_hash']
+  }
+
+  Note: '''
+    Workers select eligible PENDING/RETRY events FOR UPDATE SKIP LOCKED.
+    Keep the inbox lock, product writes, child writes and final status in one
+    short database transaction. There is no separately committed PROCESSING
+    state. APPLIED, STALE, DUPLICATE, CONFLICT and FAILED are terminal statuses.
+    Record retry metadata after rolling back failed processing.
+    Repeated deliveries may create multiple inbox rows. Product writes remain
+    idempotent through the product unique key, source revision and content hash.
+    No per-file checkpoints: a failed source read/import can be replayed from
+    the beginning, provided the source or original file remains available.
+  '''
+}
+
+Ref: product_units.product_record_id > products.id [delete: cascade]
+Ref: product_categories.product_record_id > products.id [delete: cascade]
+Ref: product_bundles.product_record_id > products.id [delete: cascade]
+Ref: product_bundle_details.product_bundle_id > product_bundles.id [delete: cascade]
+Ref: product_barcodes.product_record_id > products.id [delete: cascade]
+Ref: inbox_events.channel_id > channels.id [delete: restrict]
+
+TableGroup ProductData {
+  products
+  product_units
+  product_categories
+  product_bundles
+  product_bundle_details
+  product_barcodes
+}
+
+TableGroup ChannelConfiguration {
+  channels
+}
+
+TableGroup EventProcessing {
+  inbox_events
+}
